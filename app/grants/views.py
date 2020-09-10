@@ -865,6 +865,7 @@ def grants_by_grant_clr(request, clr_round):
     response['X-Frame-Options'] = 'SAMEORIGIN'
     return response
 
+# TODO: REMOVE
 def add_form_categories_to_grant(form_category_ids, grant, grant_type):
     form_category_ids = [int(i) for i in form_category_ids if i != '']
 
@@ -1201,35 +1202,30 @@ def grant_new(request):
         if not description_rich:
             description_rich = description
 
-        admin_address = request.POST.get('admin_address', None)
+        eth_payout_address = request.POST.get('eth_payout_address', None)
         zcash_payout_address = request.POST.get('zcash_payout_address', None)
-        if not admin_address and not zcash_payout_address:
-            response['message'] = 'error: admin_address/zcash_payout_address is a mandatory parameter'
+        if not eth_payout_address and not zcash_payout_address:
+            response['message'] = 'error: eth_payout_address/zcash_payout_address is a mandatory parameter'
             return JsonResponse(response)
 
-        if zcash_payout_address and not zcash_payout_address.startsWith('t'):
+        if zcash_payout_address and not zcash_payout_address.startswith('t'):
             response['message'] = 'error: zcash_payout_address must be a transparent address'
             return JsonResponse(response)
 
 
-        token_symbol = request.POST.get('token_symbol', None)
-        if not token_symbol:
-            response['message'] = 'error: token_symbol is a mandatory parameter'
-            return JsonResponse(response)
-
-        logo = request.FILES.get('input_image', None)
+        token_symbol = request.POST.get('token_symbol', 'Any Token')
+        logo = request.FILES.get('logo', None)
         metdata = json.loads(request.POST.get('receipt', '{}'))
         team_members = request.POST.getlist('team_members[]')
         reference_url = request.POST.get('reference_url', '')
         github_project_url = request.POST.get('github_project_url', None)
         network = request.POST.get('network', 'mainnet')
-        contract_version = request.POST.get('contract_version', '')
         twitter_handle_1 = request.POST.get('handle1', '')
         twitter_handle_2 = request.POST.get('handle2', '')
 
+
         # TODO: REMOVE
-        token_address = request.POST.get('token_address', None)
-        contract_owner_address = request.POST.get('contract_owner_address', '')
+        contract_version = request.POST.get('contract_version', '2')
 
         grant_kwargs = {
             'title': title,
@@ -1237,10 +1233,8 @@ def grant_new(request):
             'description_rich': description_rich,
             'reference_url': reference_url,
             'github_project_url': github_project_url,
-            'admin_address': admin_address,
+            'admin_address': eth_payout_address,
             'zcash_payout_address': zcash_payout_address,
-            'contract_owner_address': contract_owner_address,
-            'token_address': token_address,
             'token_symbol': token_symbol,
             'contract_version': contract_version,
             'deploy_tx_id': request.POST.get('transaction_hash', ''),
@@ -1267,19 +1261,22 @@ def grant_new(request):
         team_members = [int(i) for i in team_members if i != '']
 
         grant.team_members.add(*team_members)
-        grant.save()
 
         form_category_ids = request.POST.getlist('categories[]')
         form_category_ids = (form_category_ids[0].split(','))
         form_category_ids = list(set(form_category_ids))
 
-        add_form_categories_to_grant(form_category_ids, grant, grant_type)
+        for category_id in form_category_ids:
+            grant_category = GrantCategory.objects.get(pk=category_id)
+            grant.categories.add(grant_category)
+
+        grant.save()
 
         messages.info(
             request,
             _('Thank you for posting this Grant.  Share the Grant URL with your friends/followers to raise your first tokens.')
         )
-        grant.save()
+
         record_grant_activity_helper('new_grant', grant, profile)
         new_grant(grant, profile)
 
@@ -1295,24 +1292,40 @@ def grant_new(request):
 
     profile = get_profile(request)
 
+    grant_types = []
+    for g_type in GrantType.objects.all():
+        grant_categories = []
+
+        for g_category in g_type.categories.all():
+            grant_categories.append({
+                'id': g_category.pk,
+                'name': g_category.category
+            })
+        grant_types.append({
+            'id': g_type.pk,
+            'name': g_type.name,
+            'label': g_type.label,
+            'categories': grant_categories
+        })
+
     params = {
         'active': 'new_grant',
         'title': _('New Grant'),
         'card_desc': _('Provide sustainable funding for Open Source with Gitcoin Grants'),
         'profile': profile,
-        'grant': {},
-        'keywords': get_keywords(),
-        'recommend_gas_price': recommend_min_gas_price_to_confirm_in_time(4),
-        'recommend_gas_price_slow': recommend_min_gas_price_to_confirm_in_time(120),
-        'recommend_gas_price_avg': recommend_min_gas_price_to_confirm_in_time(15),
-        'recommend_gas_price_fast': recommend_min_gas_price_to_confirm_in_time(1),
-        'eth_usd_conv_rate': eth_usd_conv_rate(),
-        'conf_time_spread': conf_time_spread(),
-        'gas_advisories': gas_advisories(),
+        # 'grant': {},
+        # 'keywords': get_keywords(),
+        # 'recommend_gas_price': recommend_min_gas_price_to_confirm_in_time(4),
+        # 'recommend_gas_price_slow': recommend_min_gas_price_to_confirm_in_time(120),
+        # 'recommend_gas_price_avg': recommend_min_gas_price_to_confirm_in_time(15),
+        # 'recommend_gas_price_fast': recommend_min_gas_price_to_confirm_in_time(1),
+        # 'eth_usd_conv_rate': eth_usd_conv_rate(),
+        # 'conf_time_spread': conf_time_spread(),
+        # 'gas_advisories': gas_advisories(),
         'trusted_relayer': settings.GRANTS_OWNER_ACCOUNT,
-        'grant_types': GrantType.objects.all()
+        'grant_types': grant_types
     }
-    return TemplateResponse(request, 'grants/new.html', params)
+    return TemplateResponse(request, 'grants/_new.html', params)
 
 
 @login_required

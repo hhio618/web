@@ -338,15 +338,8 @@
             <span id="grant-admin" class="font-weight-semibold ">{{ grant.admin_profile.handle|default:'anonymous' }}</span>
           </div>
         </div>
-        <div>
-          <p class="sub-title mb-0" data-toggle="tooltip" data-placement="bottom" title="Address used to create this grant.">Contract Owner Address</p>
-          <p id="contract_owner_address" class="p-0 m-0 font-body">{{ grant.contract_owner_address }}</p>
-        </div>
       </div>
 
     {% endif %}
-
-    <span id="grant_contract_owner_address" class="hidden">{{ grant.contract_owner_address }}</span>
-
   </div>
 </div>
