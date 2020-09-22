@@ -10,7 +10,7 @@ def txn_already_used(txn, token_symbol):
     from grants.models import Contribution
 
     return Contribution.objects.filter(
-        payout_tx_id = txn,
+        tx_id = txn,
         subscription__token_symbol = token_symbol
     ).exists()
 
@@ -32,7 +32,7 @@ def record_contribution_activity(contribution):
             'token_name': subscription.token_symbol,
             'title': subscription.grant.title,
             'grant_url': subscription.grant.url,
-            'num_tx_approved': subscription.num_tx_approved,
+            'num_tx_approved': round(subscription.num_tx_approved),
             'category': 'grant',
         }
 

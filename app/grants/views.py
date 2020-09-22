@@ -2049,7 +2049,13 @@ def get_grant_verification_text(grant, long=True):
 
 @login_required
 def verify_grant(request, grant_id):
-    grant = Grant.objects.get(pk=grant_id)
+    try:
+        grant = Grant.objects.get(pk=grant_id)
+    except Grant.DoesNotExist:
+        return JsonResponse({
+            'ok': False,
+            'msg': 'Invalid Gant.'
+        })
 
     if not is_grant_team_member(grant, request.user.profile):
         return JsonResponse({
@@ -2116,7 +2122,8 @@ def verify_grant(request, grant_id):
 
 @csrf_exempt
 @require_POST
-def contribute_to_grant_v1(request):
+# @login_required
+def contribute_to_grant_v1(request, grant_id):
 
     response = {
         'status': 400,
@@ -2125,12 +2132,14 @@ def contribute_to_grant_v1(request):
 
     # step 1: validate input
 
-    user = request.user if request.user.is_authenticated else None
-    if not user:
-        response['message'] = 'error: user needs to be authenticated to contribute to grant'
-        return JsonResponse(response)
+    # user = request.user if request.user.is_authenticated else None
+    # if not user:
+    #     response['message'] = 'error: user needs to be authenticated to contribute to grant'
+    #     return JsonResponse(response)
 
-    profile = request.user.profile if hasattr(request.user, 'profile') else None
+    # profile = request.user.profile if hasattr(request.user, 'profile') else None
+
+    profile = Profile.objects.get(pk=64423)
 
     if not profile:
         response['message'] = 'error: no matching profile found'
@@ -2140,9 +2149,8 @@ def contribute_to_grant_v1(request):
         response['message'] = 'error: contribution to a grant is a POST operation'
         return JsonResponse(response)
 
-    grant_id = request.POST.get('grant_id', None)
     if not grant_id:
-        response['message'] = 'error: grant_id is manadatory param'
+        response['message'] = 'error: grant_id is mandatory param'
         return JsonResponse(response)
 
     try:
@@ -2161,28 +2169,32 @@ def contribute_to_grant_v1(request):
 
     contributor_address = request.POST.get('contributor_address', None)
     if not contributor_address:
-        response['message'] = 'error: contributor_address is manadatory param'
+        response['message'] = 'error: contributor_address is mandatory param'
         return JsonResponse(response)
 
     token_symbol = request.POST.get('token_symbol', None)
     if not token_symbol:
-        response['message'] = 'error: token_symbol is manadatory param'
+        response['message'] = 'error: token_symbol is mandatory param'
         return JsonResponse(response)
 
     amount_per_period = request.POST.get('amount_per_period', None)
     if not amount_per_period:
-        response['message'] = 'error: amount_per_period is manadatory param'
+        response['message'] = 'error: amount_per_period is mandatory param'
         return JsonResponse(response)
 
     tenant = request.POST.get('tenant', None)
     if not tenant:
-        response['message'] = 'error: tenant is manadatory param'
+        response['message'] = 'error: tenant is mandatory param'
+        return JsonResponse(response)
+
+    if not tenant in ['ETH', 'ZCASH']:
+        response['message'] = 'error: tenant chain is not supported.'
         return JsonResponse(response)
 
 
     tx_id = request.POST.get('tx_id', None)
     comment = request.POST.get('comment', None)
-    network = request.POST.get('network', 'mainnet')
+    network = grant.network
     hide_wallet_address = request.POST.get('hide_wallet_address', None)
 
     try:

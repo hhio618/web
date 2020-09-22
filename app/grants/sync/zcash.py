@@ -19,14 +19,14 @@ def find_txn_on_zcash_explorer(contribution):
     from_address = subscription.contributor_address
     amount = subscription.amount_per_period
 
-    url = f'https://sochain.com/api/v2/get_address_balance/ZEC/{from_address}'
+    url = f'https://sochain.com/api/v2/address/ZEC/{from_address}'
     response = requests.get(url).json()
 
     # Check contributors txn history
     if response['status'] == 'success' and response['data'] and response['data']['txs']:
         txns = response['data']['txs']
         for txn in txns:
-            if txn['outgoing'] and txn['outgoing']['outputs']:
+            if txn.get('outgoing') and txn['outgoing']['outputs']:
                 for output in txn['outgoing']['outputs']:
                     if (
                         output['address'] == to_address and
@@ -36,19 +36,19 @@ def find_txn_on_zcash_explorer(contribution):
                     ):
                         return txn['txid']
 
-    url = f'https://sochain.com/api/v2/get_address_balance/ZEC/{to_address}'
+
+    url = f'https://sochain.com/api/v2/address/ZEC/{to_address}'
     response = requests.get(url).json()
 
     # Check funders txn history
     if response['status'] == 'success' and response['data'] and response['data']['txs']:
         txns = response['data']['txs']
         for txn in txns:
-            if txn['incoming'] and txn['incoming']['inputs']:
+            if txn.get('incoming') and txn['incoming']['inputs']:
                 for input_tx in txn['incoming']['inputs']:
                     if (
                         input_tx['address'] == from_address and
                         response['data']['address'] == to_address and
-                        float(input_tx['value']) == float(amount) and
                         not txn_already_used(txn['txid'], token_symbol)
                     ):
                         return txn['txid']
@@ -66,7 +66,7 @@ def get_zcash_txn_status(txnid):
     if (
         response['status'] == 'success' and
         response['data'] and
-        response['is_confirmed'] == 'true'
+        response['data']['is_confirmed']
     ):
         return True
 
@@ -77,7 +77,7 @@ def sync_zcash_payout(contribution):
     if not contribution.tx_id:
         txn = find_txn_on_zcash_explorer(contribution)
         if txn:
-            contribution.tx_id = txn['hash']
+            contribution.tx_id = txn
 
     if contribution.tx_id:
         is_sucessfull_txn = get_zcash_txn_status(contribution.tx_id)
