@@ -398,6 +398,19 @@ class Grant(SuperModel):
         return f"id: {self.pk}, active: {self.active}, title: {self.title}, type: {self.grant_type}"
 
 
+    @property
+    def tenants(self):
+        """returns list of chains the grant can recieve contributions in"""
+        tenants = []
+        # TODO: rename to eth_payout_address
+        if self.admin_address and self.admin_address != '0x0':
+            tenants.append('ETH')
+        if self.zcash_payout_address and self.zcash_payout_address != '0x0':
+            tenants.append('ZCASH')
+
+        return tenants
+
+
     def updateActiveSubscriptions(self):
         """updates the active subscriptions list"""
         handles = []

@@ -373,9 +373,11 @@ def get_grants(request):
                 'contract_address': grant.contract_address,
                 'token_symbol': grant.token_symbol,
                 'admin_address': grant.admin_address,
+                'zcash_payout_address': grant.zcash_payout_address,
                 'token_address': grant.token_address,
                 'image_css': grant.image_css,
                 'verified': grant.twitter_verified,
+                'tenants': grant.tenants,
             }
 
         grants_array.append(grant_json)
@@ -1089,6 +1091,7 @@ def grant_details(request, grant_id, grant_slug):
         'options': [(f'Email Grant Funders ({grant.contributor_count})', 'bullhorn', 'Select this option to email your status update to all your funders.')] if is_team_member else [],
         'user_code': get_user_code(request.user.profile.id, grant, emoji_codes) if request.user.is_authenticated else '',
         'verification_tweet': get_grant_verification_text(grant),
+        'tenants': grant.tenants,
     }
 
     if tab == 'stats':
